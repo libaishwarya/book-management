@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/csv"
+	"errors"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,7 +47,7 @@ type User struct {
 type Book struct {
 	Name            string `json:"name"`
 	Author          string `json:"author"`
-	PublicationYear string `json:"publication_year"`
+	PublicationYear int    `json:"publication_year"`
 }
 
 // JWT claims struct.
@@ -114,10 +116,11 @@ func homeHandler(c *gin.Context) {
 
 		// Parse CSV records into Book struct
 		for _, record := range records[1:] {
+			publicationYear, _ := strconv.Atoi(record[2])
 			book := Book{
 				Name:            record[0],
 				Author:          record[1],
-				PublicationYear: record[2],
+				PublicationYear: publicationYear,
 			}
 			books = append(books, book)
 		}
@@ -125,6 +128,45 @@ func homeHandler(c *gin.Context) {
 		// Return JSON response
 		c.JSON(http.StatusOK, books)
 	}
+}
+
+// Function to validate book data
+func validateBookData(book Book) error {
+	// Validate publication year
+	if book.PublicationYear < 0 {
+		return errors.New("publication year must be a positive integer")
+	}
+
+	if book.Author == "" {
+		return errors.New("author should not be empty")
+	}
+
+	if book.Name == "" {
+		return errors.New("name should not be empty")
+	}
+
+	return nil
+}
+
+// Function to write books to CSV file
+func writeBooksToCSV(books []Book) error {
+	file, err := os.Create("books.csv")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, book := range books {
+		err := writer.Write([]string{book.Name, book.Author, strconv.Itoa(book.PublicationYear)})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Middleware to authorize access.
