@@ -144,7 +144,7 @@ func addBookHandler(c *gin.Context) {
 // Function to validate book data
 func validateBookData(book Book) error {
 	// Validate publication year
-	if book.PublicationYear < 0 {
+	if book.PublicationYear <= 0 {
 		return errors.New("publication year must be a positive integer")
 	}
 
