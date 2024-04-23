@@ -258,7 +258,7 @@ func authorize(role string) gin.HandlerFunc {
 	}
 }
 
-// Middleware to validate add book data
+// Middleware to validate add book data.
 func validateAddBookData() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var book Book
@@ -279,7 +279,7 @@ func validateAddBookData() gin.HandlerFunc {
 	}
 }
 
-// Middleware to validate delete book data
+// Middleware to validate delete book data.
 func validateDeleteBookData() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var book Book
@@ -300,7 +300,7 @@ func validateDeleteBookData() gin.HandlerFunc {
 	}
 }
 
-// Function to validate book data
+// Function to validate book data.
 func validateBookData(book Book) error {
 	// Validate publication year
 	if book.PublicationYear <= 0 {
@@ -318,7 +318,7 @@ func validateBookData(book Book) error {
 	return nil
 }
 
-// Check if user is admin
+// Check if user is admin.
 func isAdmin(c *gin.Context) bool {
 	user, _ := c.Get("user")
 	if user != nil {
