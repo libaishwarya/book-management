@@ -73,3 +73,20 @@ func loginHandler(c *gin.Context) {
 	// User does not exist in inmemory DB.
 	c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 }
+
+// Middleware to authorize access.
+func authorize(role string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, _ := c.Get("user")
+		if user != nil {
+			if usr, ok := user.(User); ok {
+				if usr.Role != role && usr.Role != "admin" {
+					c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient privileges"})
+					c.Abort()
+					return
+				}
+			}
+		}
+		c.Next()
+	}
+}
