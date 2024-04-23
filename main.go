@@ -32,7 +32,9 @@ func main() {
 
 	r.GET("/home", authorize("regular"), homeHandler)
 
-	r.POST("/addBook", authorize("admin"), validateBookDataMiddleware(), addBookHandler)
+	r.POST("/addBook", authorize("admin"), validateAddBookData(), addBookHandler)
+
+	r.POST("/deleteBook", authorize("admin"), validateDeleteBookData(), deleteBookHandler)
 
 	r.Run(":8080")
 }
@@ -235,8 +237,8 @@ func isAdmin(c *gin.Context) bool {
 	return false
 }
 
-// Middleware to validate book data
-func validateBookDataMiddleware() gin.HandlerFunc {
+// Middleware to validate add book data
+func validateAddBookData() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var book Book
 		if err := c.ShouldBindJSON(&book); err != nil {
@@ -247,6 +249,27 @@ func validateBookDataMiddleware() gin.HandlerFunc {
 
 		if err := validateBookData(book); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			c.Abort()
+			return
+		}
+
+		c.Set("book", book)
+		c.Next()
+	}
+}
+
+// Middleware to validate delete book data
+func validateDeleteBookData() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var book Book
+		if err := c.ShouldBindJSON(&book); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request"})
+			c.Abort()
+			return
+		}
+
+		if book.Name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "name should not be empty"})
 			c.Abort()
 			return
 		}
