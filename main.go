@@ -214,24 +214,6 @@ func deleteBookHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Book deleted successfully"})
 }
 
-// Function to validate book data
-func validateBookData(book Book) error {
-	// Validate publication year
-	if book.PublicationYear <= 0 {
-		return errors.New("publication year must be a positive integer")
-	}
-
-	if book.Author == "" {
-		return errors.New("author should not be empty")
-	}
-
-	if book.Name == "" {
-		return errors.New("name should not be empty")
-	}
-
-	return nil
-}
-
 // Middleware to authorize access.
 func authorize(role string) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -276,17 +258,6 @@ func authorize(role string) gin.HandlerFunc {
 	}
 }
 
-// Check if user is admin
-func isAdmin(c *gin.Context) bool {
-	user, _ := c.Get("user")
-	if user != nil {
-		if usr, ok := user.(User); ok {
-			return usr.Role == "admin"
-		}
-	}
-	return false
-}
-
 // Middleware to validate add book data
 func validateAddBookData() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -327,4 +298,33 @@ func validateDeleteBookData() gin.HandlerFunc {
 		c.Set("book", book)
 		c.Next()
 	}
+}
+
+// Function to validate book data
+func validateBookData(book Book) error {
+	// Validate publication year
+	if book.PublicationYear <= 0 {
+		return errors.New("publication year must be a positive integer")
+	}
+
+	if book.Author == "" {
+		return errors.New("author should not be empty")
+	}
+
+	if book.Name == "" {
+		return errors.New("name should not be empty")
+	}
+
+	return nil
+}
+
+// Check if user is admin
+func isAdmin(c *gin.Context) bool {
+	user, _ := c.Get("user")
+	if user != nil {
+		if usr, ok := user.(User); ok {
+			return usr.Role == "admin"
+		}
+	}
+	return false
 }
