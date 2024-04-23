@@ -13,12 +13,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Secret key for JWT
+// Secret key for JWT.
 const (
 	jwtKey = "secret_key"
 )
 
-// In-memory database of users
+// In-memory database of users.
 var users = []User{
 	{Username: "user", Password: "password", Role: "regular"},
 	{Username: "admin", Password: "admin", Role: "admin"},
@@ -27,7 +27,7 @@ var users = []User{
 func main() {
 	r := gin.Default()
 
-	// Attach Routes
+	// Attach Routes.
 	r.POST("/login", loginHandler)
 
 	r.GET("/home", authorize("regular"), homeHandler)
