@@ -90,3 +90,14 @@ func authorize(role string) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// Check if user is admin
+func isAdmin(c *gin.Context) bool {
+	user, _ := c.Get("user")
+	if user != nil {
+		if usr, ok := user.(User); ok {
+			return usr.Role == "admin"
+		}
+	}
+	return false
+}
