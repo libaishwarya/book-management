@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/csv"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -91,6 +93,8 @@ func homeHandler(c *gin.Context) {
 		fileNames = append(fileNames, "adminUser.csv")
 	}
 
+	books := make([]Book, 0)
+
 	for _, fileName := range fileNames {
 		file, err := os.Open(fileName)
 		if err != nil {
@@ -98,24 +102,67 @@ func homeHandler(c *gin.Context) {
 			return
 		}
 		defer file.Close()
-	}
 
+		reader := csv.NewReader(file)
+
+		// Read CSV records
+		records, err := reader.ReadAll()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read CSV file"})
+			return
+		}
+
+		// Parse CSV records into Book struct
+		for _, record := range records[1:] {
+			book := Book{
+				Name:            record[0],
+				Author:          record[1],
+				PublicationYear: record[2],
+			}
+			books = append(books, book)
+		}
+
+		// Return JSON response
+		c.JSON(http.StatusOK, books)
+	}
 }
 
 // Middleware to authorize access.
 func authorize(role string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, _ := c.Get("user")
-		if user != nil {
-			if usr, ok := user.(User); ok {
-				if usr.Role != role && usr.Role != "admin" {
-					c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient privileges"})
-					c.Abort()
-					return
-				}
-			}
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
+			c.Abort()
+			return
 		}
-		c.Next()
+
+		// Check if the token starts with "Bearer ", and remove it if it does
+		const prefix = "Bearer "
+		tokenString = strings.TrimPrefix(tokenString, prefix)
+
+		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(jwtKey), nil
+		})
+
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+			if claims.Role != "admin" && claims.Role != role {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient privileges"})
+				c.Abort()
+				return
+			}
+			c.Next()
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
 	}
 }
 
