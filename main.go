@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -25,6 +26,9 @@ func main() {
 	// Attach Routes
 	r.POST("/login", loginHandler)
 
+	// Route to handle CSV file reading and output
+	r.GET("/home", authorize("regular"), homeHandler)
+
 	r.Run(":8080")
 }
 
@@ -35,7 +39,14 @@ type User struct {
 	Role     string
 }
 
-// JWT claims struct
+// Book represents the structure of a book.
+type Book struct {
+	Name            string `json:"name"`
+	Author          string `json:"author"`
+	PublicationYear string `json:"publication_year"`
+}
+
+// JWT claims struct.
 type Claims struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
@@ -72,6 +83,23 @@ func loginHandler(c *gin.Context) {
 	}
 	// User does not exist in inmemory DB.
 	c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+}
+
+func homeHandler(c *gin.Context) {
+	fileNames := []string{"regularUser.csv"}
+	if isAdmin(c) {
+		fileNames = append(fileNames, "adminUser.csv")
+	}
+
+	for _, fileName := range fileNames {
+		file, err := os.Open(fileName)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open CSV file"})
+			return
+		}
+		defer file.Close()
+	}
+
 }
 
 // Middleware to authorize access.
