@@ -13,6 +13,12 @@ const (
 	jwtKey = "secret_key"
 )
 
+// In-memory database of users
+var users = []User{
+	{Username: "user", Password: "password", Role: "regular"},
+	{Username: "admin", Password: "admin", Role: "admin"},
+}
+
 func main() {
 	r := gin.Default()
 
@@ -36,12 +42,6 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-// In-memory database of users
-var users = []User{
-	{Username: "user", Password: "password", Role: "regular"},
-	{Username: "admin", Password: "admin", Role: "admin"},
-}
-
 func loginHandler(c *gin.Context) {
 	var user User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -61,7 +61,7 @@ func loginHandler(c *gin.Context) {
 				},
 			}
 			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-			tokenString, err := token.SignedString(jwtKey)
+			tokenString, err := token.SignedString([]byte(jwtKey))
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 				return
