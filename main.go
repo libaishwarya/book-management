@@ -30,8 +30,9 @@ func main() {
 	// Attach Routes
 	r.POST("/login", loginHandler)
 
-	// Route to handle CSV file reading and output
 	r.GET("/home", authorize("regular"), homeHandler)
+
+	r.POST("/addBook", authorize("admin"), validateBookDataMiddleware(), addBookHandler)
 
 	r.Run(":8080")
 }
@@ -130,6 +131,16 @@ func homeHandler(c *gin.Context) {
 	}
 }
 
+func addBookHandler(c *gin.Context) {
+	book := c.MustGet("book").(Book)
+	if err := writeBooksToCSV([]Book{book}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "writing books to csv"})
+		return
+	}
+
+	c.JSON(http.StatusOK, book)
+}
+
 // Function to validate book data
 func validateBookData(book Book) error {
 	// Validate publication year
@@ -150,7 +161,7 @@ func validateBookData(book Book) error {
 
 // Function to write books to CSV file
 func writeBooksToCSV(books []Book) error {
-	file, err := os.Create("books.csv")
+	file, err := os.OpenFile("regularUser.csv", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
@@ -222,4 +233,25 @@ func isAdmin(c *gin.Context) bool {
 		}
 	}
 	return false
+}
+
+// Middleware to validate book data
+func validateBookDataMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var book Book
+		if err := c.ShouldBindJSON(&book); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request"})
+			c.Abort()
+			return
+		}
+
+		if err := validateBookData(book); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			c.Abort()
+			return
+		}
+
+		c.Set("book", book)
+		c.Next()
+	}
 }
