@@ -135,12 +135,83 @@ func homeHandler(c *gin.Context) {
 
 func addBookHandler(c *gin.Context) {
 	book := c.MustGet("book").(Book)
-	if err := writeBooksToCSV([]Book{book}); err != nil {
+
+	file, err := os.OpenFile("regularUser.csv", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "opening csv"})
+		return
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	err = writer.Write([]string{book.Name, book.Author, strconv.Itoa(book.PublicationYear)})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "writing books to csv"})
 		return
 	}
 
 	c.JSON(http.StatusOK, book)
+}
+
+func deleteBookHandler(c *gin.Context) {
+	book := c.MustGet("book").(Book)
+
+	// Read the contents of the CSV file
+	file, err := os.OpenFile("regularUser.csv", os.O_RDWR, 0644)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to open CSV file"})
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	lines, err := reader.ReadAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to read CSV file"})
+		return
+	}
+
+	// Find the index of the book to delete (case-insensitive)
+	var indexToDelete int = -1
+	for i, line := range lines {
+		if len(line) > 0 && strings.EqualFold(line[0], book.Name) {
+			indexToDelete = i
+			break
+		}
+	}
+
+	if indexToDelete == -1 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Book not found"})
+		return
+	}
+
+	// Remove the book from the slice
+	lines = append(lines[:indexToDelete], lines[indexToDelete+1:]...)
+
+	// Write the updated data back to the CSV file
+	if err := file.Truncate(0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to truncate CSV file"})
+		return
+	}
+
+	if _, err := file.Seek(0, 0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to seek CSV file"})
+		return
+	}
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, line := range lines {
+		if err := writer.Write(line); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to write to CSV file"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Book deleted successfully"})
 }
 
 // Function to validate book data
@@ -156,27 +227,6 @@ func validateBookData(book Book) error {
 
 	if book.Name == "" {
 		return errors.New("name should not be empty")
-	}
-
-	return nil
-}
-
-// Function to write books to CSV file
-func writeBooksToCSV(books []Book) error {
-	file, err := os.OpenFile("regularUser.csv", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	for _, book := range books {
-		err := writer.Write([]string{book.Name, book.Author, strconv.Itoa(book.PublicationYear)})
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
