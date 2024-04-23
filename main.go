@@ -157,6 +157,11 @@ func authorize(role string) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
+
+			c.Set("user", User{
+				Username: claims.Username,
+				Role:     claims.Role,
+			})
 			c.Next()
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
