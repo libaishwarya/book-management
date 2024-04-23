@@ -1,2 +1,2 @@
 # book-management
-book management micro service
+Run the server and Use the postman collection to check the server.
